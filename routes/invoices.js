@@ -18,8 +18,8 @@ const db = require("../db");
        ORDER BY id`
        );
     return res.json({ "invoices": result.rows })
-  } catch (e) {
-    return next(e);
+  } catch (err) {
+    return next(err);
   }
 })
 
@@ -53,11 +53,11 @@ const db = require("../db");
       amt: data.amt,
       paid: data.paid,
       add_date: data.add_date,
-      paid_date: data.paid_date
+      paid_date: data.paid_date,
     };
     return res.json({ "invoice": invoice });
-  } catch (e) {
-    return next(e);
+  } catch (err) {
+    return next(err);
   }
 });
 
@@ -75,9 +75,9 @@ const db = require("../db");
        RETURNING id, comp_code, amt, paid, add_date, paid_date`, 
        [comp_code, amt]
     );
-    return res.status(201).json({ "invoice":result.rows[0] })
-  } catch (e) {
-    return next(e)
+    return res.json({ "invoice":result.rows[0] })
+  } catch (err) {
+    return next(err)
   }
 })
 
@@ -120,8 +120,8 @@ router.put('/:id', async (req, res, next) => {
     );
     
     return res.json({ "invoice": result.rows[0] })
-  } catch (e) {
-    return next(e)
+  } catch (err) {
+    return next(err)
   }
 })
 
@@ -131,18 +131,19 @@ router.put('/:id', async (req, res, next) => {
  */
  router.delete('/:id', async (req, res, next) => {
   try {
+    const { id } = req.params;
     const result = await db.query(
       `DELETE FROM invoices 
        WHERE id = $1
        RETURNING id`,
-      [req.params.id]
+      [id]
     );
     if (result.rows.length === 0) {
       throw new ExpressError(`Cannot find invoice with id: ${id}`, 404)
     }
     return res.json({ status: "deleted" });
-  } catch (e) {
-    return next(e);
+  } catch (err) {
+    return next(err);
   }
 });
 

@@ -1,6 +1,7 @@
 const express = require("express");
 const ExpressError = require("../expressError");
 const router = new express.Router();
+const slugify = require("slugify");
 
 const db = require("../db");
 
@@ -16,10 +17,11 @@ router.get('/', async (req, res, next) => {
        ORDER BY name`
        );
     return res.json({ "companies": result.rows })
-  } catch (e) {
-    return next(e);
+  } catch (err) {
+    return next(err);
   }
 })
+
 
 /** GET /[code] => details of specific company.
  * => {company: {code, name, description, invoices: [id, ...]}}
@@ -42,17 +44,17 @@ router.get('/:code', async (req, res, next) => {
        [code]
     );
     if (compResult.rows.length === 0) {
-      throw new ExpressError(`Can't find company with code of ${code}, 404`);
+      throw new ExpressError(`Can't find company with code of ${code}`, 404);
     }
 
     const company = compResult.rows[0];
     const invoices = invResult.rows;
 
-    company.invoice = invoices.map(inv => inv.id);
+    company.invoices = invoices.map(inv => inv.id);
 
     return res.json({ "company": company });
-  } catch (e) {
-    return next(e);
+  } catch (err) {
+    return next(err);
   }
 });
 
@@ -64,16 +66,18 @@ router.get('/:code', async (req, res, next) => {
 
 router.post('/', async (req, res, next) => {
   try {
-    const { code, name, description } = req.body;
+    const { name, description } = req.body;
+    let code = slugify(name, {lower: true});
+
     const result = await db.query(
       `INSERT INTO companies (code, name, description) 
        VALUES ($1, $2, $3) 
        RETURNING code, name, description`, 
        [code, name, description]
     );
-    return res.status(201).json({ "company":result.rows[0] })
-  } catch (e) {
-    return next(e)
+    return res.status(201).json({ "company": result.rows[0] })
+  } catch (err) {
+    return next(err)
   }
 })
 
@@ -95,12 +99,13 @@ router.put('/:code', async (req, res, next) => {
     );
     if (result.rows.length === 0) {
       throw new ExpressError(`Cannot find company with code ${code}`, 404)
-    }
+    } else {
     return res.json({ "company": result.rows[0] })
-  } catch (e) {
-    return next(e)
+    }
+  } catch (err) {
+    return next(err)
   }
-})
+});
 
 
 /** DELETE /[code] => Deletes existing company 
@@ -109,18 +114,19 @@ router.put('/:code', async (req, res, next) => {
  */
 router.delete('/:code', async (req, res, next) => {
   try {
+    const { code } = req.params;
     const result = await db.query(
       `DELETE FROM companies 
-      WHERE code = $1
-      RETURNING code`,
-      [req.params.code]
+       WHERE code = $1
+       RETURNING code`,
+      [code]
     );
     if (result.rows.length === 0) {
       throw new ExpressError(`Cannot find company with code ${code}`, 404)
     }
     return res.json({ status: "deleted" });
-  } catch (e) {
-    return next(e);
+  } catch (err) {
+    return next(err);
   }
 })
 
